@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Canvas</title>
+	<style>
+		body {
+			background-color: black;
+		}
+
+		#canvas {
+			display: block;
+			margin: 10em, auto;
+			border: 1px solid red;
+			background-color: white;
+		}
+
+		.buttons {
+			margin-top: 1rem;
+		}
+	</style>
+</head>
+
+<body>
+	<canvas id="canvas" width="850" , height="650"></canvas>
+	<div class="buttons">
+		<button type="button" onclick="increase()">increase</button>
+		<button type="button" onclick="next(1)">next</button>
+		<button type="button" onclick="next(5)">next 5</button>
+	</div>
+	<script>
+		const startPoint = 5;
+		const originalPoints = [
+			{ x: 654, y: 114 },
+			{ x: 25, y: 281 },
+			{ x: 250, y: 228 },
+			{ x: 142, y: 104 },
+			{ x: 692, y: 558 },
+			{ x: 89, y: 432 },
+			{ x: 32, y: 30 },
+			{ x: 95, y: 223 },
+			{ x: 238, y: 517 },
+			{ x: 616, y: 27 },
+			{ x: 200, y: 200 },
+			{ x: 400, y: 190 },
+			{ x: 400, y: 100 },
+			{ x: 200, y: 90 },
+			{ x: 241, y: 310 },
+			{ x: 105, y: 405 },
+			{ x: 490, y: 158 },
+			{ x: 92, y: 68 },
+			{ x: 20, y: 411 },
+			{ x: 562, y: 296 },
+			{ x: 783, y: 60 },
+			{ x: 227, y: 532 },
+			{ x: 549, y: 368 },
+			{ x: 283, y: 176 },
+			{ x: 108, y: 268 },
+			{ x: 219, y: 26 },
+			{ x: 656, y: 266 },
+			{ x: 278, y: 198 },
+			{ x: 168, y: 317 },
+			{ x: 296, y: 381 },
+			{ x: 88, y: 345 },
+			{ x: 687, y: 397 },
+			{ x: 518, y: 254 },
+			{ x: 182, y: 253 },
+			{ x: 484, y: 286 },
+			{ x: 91, y: 560 },
+			{ x: 307, y: 7 },
+			{ x: 298, y: 586 },
+			{ x: 721, y: 319 },
+			{ x: 783, y: 520 },
+			{ x: 199, y: 423 },
+			{ x: 433, y: 295 },
+			{ x: 441, y: 462 },
+			{ x: 165, y: 238 }
+		];
+		originalPoints.forEach(p => p.q = 0);
+		const points = originalPoints.map((p, i) => ({ x: p.x, y: p.y, i, a: 0.0, n: false, d: 0.0 }));
+		points.forEach((p, i) => p.i = i);
+
+		const delta = 0.5;
+		let currPoint = points[startPoint];
+		originalPoints[startPoint].q = 1;
+
+		const drawLine = (ctx, x, y, a) => {
+			ctx.beginPath();
+			let x1 = Math.cos(a * Math.PI / 180) * 1000;
+			let y1 = Math.sin(a * Math.PI / 180) * 1000;
+			ctx.moveTo(x - x1, 600 - (y - y1));
+			ctx.lineTo(x + x1, 600 - (y + y1));
+			ctx.stroke();
+		}
+
+		const draw = () => {
+			ctx.clearRect(0, 0, 850, 650);
+			ctx.fillStyle = 'blue';
+			points.forEach(p => {
+				ctx.fillRect(p.x - 2, 600 - p.y - 2, 4, 4);
+				ctx.fillText(p.a.toFixed(2), p.x + 3, 600 - p.y + 3);
+			});
+			ctx.fillStyle = 'black';
+			ctx.fillRect(currPoint.x - 2, 600 - currPoint.y - 2, 4, 4)
+			ctx.fillRect(-4, 600 - 4, 8, 8);
+			drawLine(ctx, currPoint.x, currPoint.y, a);
+			ctx.fillStyle = 'red';
+			if (nextPoint) ctx.fillRect(nextPoint.x - 2, 600 - nextPoint.y - 2, 4, 4)
+			ctx.fillStyle = 'black';
+			ctx.fillText('a = ' + a.toFixed(2), 10, 10);
+		}
+
+		const canvas = document.getElementById('canvas');
+		const ctx = canvas.getContext('2d');
+		let a = 0.0;
+
+		points.splice(startPoint, 1);
+
+		const calcAngle = (p, currPoint) => {
+			let ta = Math.atan2(p.y - currPoint.y, p.x - currPoint.x);
+			if (ta > 0) ta -= 2 * Math.PI;
+			return ta * 180 / Math.PI;
+		};
+
+		const diff = (v1, v2) => {
+			return v1 > v2 ? Math.abs(v2 - v1) : Math.abs(v1 - v2 + 360);
+		};
+
+		const filterValidPoints = () => {
+			let ta = a - 180;
+			let side1 = points.filter(p => p.a < a && p.a > ta);
+			side1.forEach(p => p.d = diff(a, p.a));
+			side1.sort((a, b) => a.d - b.d);
+			let side2 = points.filter(p => !(p.a < a && p.a > ta));
+			side2.forEach(p => p.d = diff(ta, p.a));
+			side2.sort((a, b) => a.d - b.d);
+			if (side1.length == 0) return side2[0];
+			else if (side2.length == 0) return side1[0];
+			return side1[0].d < side2[0].d ? side1[0] : side2[0];
+		}
+
+		points.forEach(p => {
+			p.a = calcAngle(p, currPoint);
+			p.n = false;
+		});
+		let nextPoint = filterValidPoints();
+		nextPoint.n = true;
+		draw();
+
+		const next = (n) => {
+			for (let i = 0; i < n; ++i) {
+				let idx = points.findIndex(p => p.n);
+				a = points[idx].a;
+				if (a < -180) a += 180;
+				let oldPoint = currPoint;
+				currPoint = points.splice(idx, 1)[0];
+				originalPoints[currPoint.i].q++;
+
+
+				points.forEach(p => {
+					p.a = calcAngle(p, currPoint);
+					p.n = false;
+				});
+				nextPoint = filterValidPoints();
+				nextPoint.n = true;
+				points.push(oldPoint);
+
+				draw();
+			}
+		}
+
+		const increase = () => {
+			a -= delta;
+			draw();
+		}
+	</script>
+</body>
+
+</html>
